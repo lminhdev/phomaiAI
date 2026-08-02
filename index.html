@@ -285,13 +285,24 @@
                     
                     // Phát hiện Ngáp (Há miệng rất to và lâu)
                     if (mar > 0.25) {
-                        yawnEl.innerText = "Có";
-                        yawnEl.style.color = "#ff4444";
-                        
                         if (mouthOpenStartTime === 0) {
                             mouthOpenStartTime = currentTime;
-                        } else if (currentTime - mouthOpenStartTime > 1500) {
-                            triggerWarning("⚠️ BẠN ĐANG NGÁP LIÊN TỤC ⚠️");
+                            // Vẫn giữ trạng thái "Không" khi mới há to
+                            yawnEl.innerText = "Không";
+                            yawnEl.style.color = "#ccc";
+                        } else {
+                            let openDuration = currentTime - mouthOpenStartTime;
+                            
+                            // Há to liên tục quá 1 giây (1000ms) mới cập nhật chữ thành "Có"
+                            if (openDuration > 1000) {
+                                yawnEl.innerText = "Có";
+                                yawnEl.style.color = "#ff4444";
+                            }
+                            
+                            // Há to liên tục quá 1.5 giây (1500ms) thì bật màn hình cảnh báo đỏ
+                            if (openDuration > 1500) {
+                                triggerWarning("⚠️ BẠN ĐANG NGÁP LIÊN TỤC ⚠️");
+                            }
                         }
                     } else {
                         yawnEl.innerText = "Không";
