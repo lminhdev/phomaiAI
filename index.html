@@ -95,7 +95,6 @@
             .val { display: inline-block; margin-left: 5px; font-size: 16px; }
         }
 
-        /* --- CSS TỐI ƯU CHO CẢNH BÁO TRÊN ĐIỆN THOẠI --- */
         #warning-screen {
             position: fixed; top: 0; left: 0; width: 100vw; height: 100vh;
             background: rgba(255, 0, 0, 0.4);
@@ -128,7 +127,6 @@
 </head>
 <body> 
     
-    <!-- Màn hình đỏ cảnh báo -->
     <div id="warning-screen">
         <div id="warning-message" class="warning-text">⚠️ PHÁT HIỆN BUỒN NGỦ ⚠️</div>
     </div>
@@ -145,7 +143,6 @@
             <div><p>👀 Chớp mắt:</p> <span id="blinks" class="val">0</span></div>
             <div><p>👄 Miệng:</p> <span id="mouth" class="val">Đóng</span></div>
             <div><p>👤 Hướng:</p> <span id="head" class="val">Chính diện</span></div>
-            <!-- Hiển thị trạng thái ngáp và tổng quan -->
             <div><p>🥱 Ngáp:</p> <span id="yawn" class="val" style="color: #ccc;">Không</span></div>
             <div><p>🚨 Trạng thái:</p> <span id="status" class="val">Tỉnh táo</span></div>
         </div>
@@ -172,15 +169,12 @@
         let lastTime = 0;
         let lastBlinkTime = 0;
 
-        // Biến để theo dõi thời gian nhắm mắt / há miệng
         let eyeClosedStartTime = 0;
         let mouthOpenStartTime = 0;
         let lastBeepTime = 0;
 
-        // Cài đặt âm thanh (AudioContext)
         const audioCtx = new (window.AudioContext || window.webkitAudioContext)();
 
-        // Tự động kích hoạt AudioContext khi video bắt đầu chạy mà không cần chạm thủ công
         videoElement.addEventListener('playing', () => {
             if (audioCtx.state === 'suspended') {
                 audioCtx.resume();
@@ -271,7 +265,6 @@
                 const avgEAR = ((leftEyeH / leftEyeW) + (rightEyeH / rightEyeW)) / 2;
                 const currentTime = new Date().getTime();
 
-                // --- LOGIC MẮT (CHỚP & NHẮM LÂU) ---
                 if (avgEAR < 0.20) { 
                     if (!isBlinking && (currentTime - lastBlinkTime > 250)) {
                         blinkCount++;
@@ -293,29 +286,24 @@
                 const mouthW = getDistance(landmarks[78], landmarks[308]); 
                 const mar = mouthH / mouthW;
 
-                // --- ĐÃ ĐIỀU CHỈNH LOGIC MIỆNG (NÓI CHUYỆN & NGÁP) ---
                 if (mar > 0.15) { 
                     mouthEl.innerText = "Đang mở";
                     mouthEl.style.color = "#ff4444";
                     
-                    // Phát hiện Ngáp (Yêu cầu há miệng to hơn - mar > 0.35)
                     if (mar > 0.35) {
                         if (mouthOpenStartTime === 0) {
                             mouthOpenStartTime = currentTime;
                         } 
                         
-                        // Yêu cầu há to liên tục 800ms (0.8s) mới hiện chữ "Có"
                         if (currentTime - mouthOpenStartTime > 800) {
                             yawnEl.innerText = "Có";
                             yawnEl.style.color = "#ff4444";
                         }
                         
-                        // Yêu cầu há to liên tục 2500ms (2.5s) mới cảnh báo
                         if (currentTime - mouthOpenStartTime > 2500) {
                             triggerWarning("⚠️ BẠN ĐANG NGÁP LIÊN TỤC ⚠️");
                         }
                     } else {
-                        // Nếu đang ngáp mà khép miệng lại bớt (dưới 0.35) thì hủy ngáp
                         yawnEl.innerText = "Không";
                         yawnEl.style.color = "#ccc";
                         mouthOpenStartTime = 0;
@@ -328,7 +316,6 @@
                     mouthOpenStartTime = 0;
                 }
 
-                // Nếu người dùng bình thường lại thì tắt cảnh báo
                 if (avgEAR >= 0.20 && mar <= 0.25) {
                     clearWarning();
                 }
