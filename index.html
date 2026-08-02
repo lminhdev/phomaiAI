@@ -2,9 +2,10 @@
 <html lang="vi">
 <head>
     <meta charset="UTF-8">
-    <!-- Tối ưu viewport cho mobile: cấm zoom để giao diện giống app -->
+    <!-- Tối ưu viewport để giao diện vừa vặn trên điện thoại, chặn zoom web -->
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-    <title>AI Face Tracking (Bản Mobile)</title>
+    <title>AI Face Tracking (PC & Mobile)</title>
+    
     <!-- Import các thư viện MediaPipe từ CDN -->
     <script src="https://cdn.jsdelivr.net/npm/@mediapipe/camera_utils/camera_utils.js" crossorigin="anonymous"></script>
     <script src="https://cdn.jsdelivr.net/npm/@mediapipe/drawing_utils/drawing_utils.js" crossorigin="anonymous"></script>
@@ -22,93 +23,98 @@
             align-items: center;
             box-sizing: border-box;
         }
+        
         h2 { 
             margin-top: 5px; 
-            font-size: 20px;
+            font-size: 22px;
             text-align: center;
         }
+
+        .loading {
+            color: #0088FF;
+            font-style: italic;
+            margin-bottom: 10px;
+        }
+
         .container {
             width: 100%;
-            max-width: 500px; /* Giới hạn độ rộng tối đa trên tablet/PC */
+            max-width: 640px; /* Khống chế độ to tối đa trên PC */
+            position: relative;
             display: flex;
             flex-direction: column;
             gap: 15px;
         }
+
         video { display: none; }
         
-        /* Cập nhật Canvas cho Mobile */
         canvas {
-            width: 100%; /* Luôn co giãn vừa màn hình */
-            height: auto; /* Giữ đúng tỷ lệ, không bị méo */
-            border: 2px solid #444;
+            width: 100%; /* Luôn co giãn vừa khung container */
+            height: auto; /* Tự động giữ đúng tỷ lệ thực của Camera, chống méo hình */
+            border: 3px solid #444;
             border-radius: 12px;
             background-color: #000;
-            transform: scaleX(-1); /* Vẫn lật gương như cũ */
-            box-shadow: 0 4px 10px rgba(0,0,0,0.5);
+            transform: scaleX(-1); /* Lật gương */
+            box-shadow: 0 4px 15px rgba(0,0,0,0.5);
         }
 
-        /* Đưa Dashboard xuống dưới và chia cột để dễ nhìn trên điện thoại */
+        /* Mặc định (Giao diện cho Mobile): Dashboard dạng Grid nằm dưới Camera */
         .dashboard {
             background: #1e1e1e;
             padding: 15px;
             border-radius: 12px;
             border: 1px solid #333;
             display: grid;
-            grid-template-columns: 1fr 1fr; /* Chia làm 2 cột */
+            grid-template-columns: 1fr 1fr;
             gap: 10px;
-            box-shadow: 0 4px 10px rgba(0,0,0,0.5);
         }
+        
         .dashboard div {
             background: rgba(0, 0, 0, 0.4);
             padding: 10px;
             border-radius: 8px;
             text-align: center;
         }
-        .dashboard p { 
-            margin: 0 0 5px 0; 
-            font-size: 14px; 
-            color: #aaa;
-        }
-        .val { 
-            display: block;
-            color: #00ff00; 
-            font-weight: bold; 
-            font-size: 18px;
-        }
-        .loading {
-            text-align: center;
-            color: #0088FF;
-            font-style: italic;
+        
+        .dashboard p { margin: 0 0 5px 0; font-size: 14px; color: #ccc;}
+        .val { display: block; color: #00ff00; font-weight: bold; font-size: 18px; }
+
+        /* Media Query (Giao diện cho Máy tính): Bảng thông số đè lên góc phải */
+        @media (min-width: 768px) {
+            .dashboard {
+                position: absolute;
+                top: 15px;
+                right: 15px;
+                width: auto;
+                display: block; /* Hủy Grid */
+                background: rgba(0, 0, 0, 0.7);
+                padding: 15px;
+                border: 1px solid #555;
+            }
+            .dashboard div {
+                background: transparent;
+                padding: 0;
+                text-align: left;
+                margin-bottom: 8px;
+            }
+            .dashboard p { display: inline-block; margin: 0; font-size: 16px; color: #fff;}
+            .val { display: inline-block; margin-left: 5px; font-size: 16px; }
         }
     </style>
 </head>
 <body>
 
-    <h2>AI Theo Dõi Khuôn Mặt Mobile</h2>
+    <h2>AI Face Tracking Đa Nền Tảng</h2>
+    <p id="loading-text" class="loading">Đang khởi động Camera & Mô hình AI...</p>
+    
     <div class="container">
-        <p id="loading-text" class="loading">Đang tải mô hình AI & bật Camera...</p>
         <video id="video" autoplay playsinline></video>
-        <!-- Bỏ cứng width/height ở HTML, xử lý động bằng JS -->
         <canvas id="output_canvas"></canvas>
         
-        <!-- Bảng điều khiển được thiết kế lại thành dạng Grid (thẻ) -->
         <div class="dashboard">
-            <div>
-                <p>⚡ FPS</p>
-                <span id="fps" class="val">0</span>
-            </div>
-            <div>
-                <p>👀 Chớp mắt</p>
-                <span id="blinks" class="val">0</span>
-            </div>
-            <div>
-                <p>👄 Trạng thái miệng</p>
-                <span id="mouth" class="val">Đóng</span>
-            </div>
-            <div>
-                <p>👤 Hướng đầu</p>
-                <span id="head" class="val">Chính diện</span>
-            </div>
+            <div><p>⚡ FPS:</p> <span id="fps" class="val">0</span></div>
+            <div><p>👀 Chớp mắt:</p> <span id="blinks" class="val">0</span></div>
+            <div><p>👄 Miệng:</p> <span id="mouth" class="val">Đóng</span></div>
+            <div><p>👤 Hướng:</p> <span id="head" class="val">Chính diện</span></div>
         </div>
     </div>
 
@@ -118,13 +124,11 @@
         const canvasCtx = canvasElement.getContext('2d');
         const loadingText = document.getElementById('loading-text');
 
-        // Các thành phần UI
         const fpsEl = document.getElementById('fps');
         const blinksEl = document.getElementById('blinks');
         const mouthEl = document.getElementById('mouth');
         const headEl = document.getElementById('head');
 
-        // Biến trạng thái
         let blinkCount = 0;
         let isBlinking = false;
         let lastTime = 0;
@@ -135,18 +139,16 @@
         }
 
         function onResults(results) {
-            // Ẩn chữ loading khi có frame đầu tiên
             if(loadingText.style.display !== 'none') {
-                loadingText.style.display = 'none';
+                loadingText.style.display = 'none'; // Ẩn thông báo tải khi chạy thành công
             }
 
-            // [QUAN TRỌNG CHO MOBILE]: Tự động khớp độ phân giải canvas với luồng video thật (dọc hoặc ngang)
+            // TỰ ĐỘNG KHỚP ĐỘ PHÂN GIẢI THỰC: Tránh méo hình trên cả dọc (Mobile) và ngang (PC)
             if (canvasElement.width !== results.image.width || canvasElement.height !== results.image.height) {
                 canvasElement.width = results.image.width;
                 canvasElement.height = results.image.height;
             }
 
-            // Tính FPS
             const now = performance.now();
             const fps = Math.round(1000 / (now - lastTime));
             lastTime = now;
@@ -169,11 +171,11 @@
                 nosePoints.forEach(idx => {
                     const p = landmarks[idx];
                     canvasCtx.beginPath();
-                    canvasCtx.arc(p.x * canvasElement.width, p.y * canvasElement.height, 3, 0, 2 * Math.PI);
+                    canvasCtx.arc(p.x * canvasElement.width, p.y * canvasElement.height, 4, 0, 2 * Math.PI);
                     canvasCtx.fill();
                 });
 
-                // Đếm chớp mắt
+                // Xử lý chớp mắt
                 const leftEyeH = getDistance(landmarks[159], landmarks[145]);
                 const leftEyeW = getDistance(landmarks[33], landmarks[133]);
                 const rightEyeH = getDistance(landmarks[386], landmarks[374]);
@@ -193,7 +195,7 @@
                     isBlinking = false;
                 }
 
-                // Nhận diện mở miệng
+                // Xử lý mở miệng
                 const mouthH = getDistance(landmarks[13], landmarks[14]); 
                 const mouthW = getDistance(landmarks[78], landmarks[308]); 
                 const mar = mouthH / mouthW;
@@ -206,7 +208,7 @@
                     mouthEl.style.color = "#00ff00";
                 }
 
-                // Theo dõi hướng đầu
+                // Xử lý Hướng đầu
                 const nose = landmarks[1];
                 const leftCheek = landmarks[234];
                 const rightCheek = landmarks[454];
@@ -223,12 +225,12 @@
                     headEl.innerText = "Chính diện";
                 }
 
-                // Text
+                // Vẽ Text (Canvas lật gương nên text cũng lật)
                 canvasCtx.save();
                 canvasCtx.translate(canvasElement.width, 0); 
                 canvasCtx.scale(-1, 1);
                 canvasCtx.fillStyle = "yellow";
-                canvasCtx.font = "bold 16px Arial"; // Sửa font đậm hơn cho điện thoại
+                canvasCtx.font = "bold 16px Arial";
                 
                 canvasCtx.fillText("Mắt", (1 - landmarks[159].x) * canvasElement.width - 15, landmarks[159].y * canvasElement.height - 15);
                 canvasCtx.fillText("Mắt", (1 - landmarks[386].x) * canvasElement.width - 15, landmarks[386].y * canvasElement.height - 15);
@@ -239,7 +241,6 @@
             canvasCtx.restore();
         }
 
-        // Khởi tạo AI Face Mesh
         const faceMesh = new FaceMesh({locateFile: (file) => {
             return `https://cdn.jsdelivr.net/npm/@mediapipe/face_mesh/${file}`;
         }});
@@ -253,20 +254,17 @@
         
         faceMesh.onResults(onResults);
 
-        // Kích hoạt Webcam
         const camera = new Camera(videoElement, {
             onFrame: async () => {
                 await faceMesh.send({image: videoElement});
             },
-            // facingMode: 'user' ép trình duyệt trên điện thoại gọi Camera Trước (Selfie)
-            facingMode: 'user', 
-            width: { ideal: 640 }, // Sử dụng { ideal } cho phép điện thoại tự xoay dọc khung hình phù hợp
+            facingMode: 'user', // Ưu tiên gọi camera trước (cho điện thoại)
+            width: { ideal: 640 }, // Trình duyệt sẽ tự quyết định ngang/dọc tuỳ thiết bị
             height: { ideal: 480 }
         });
         
-        // Try-catch để báo lỗi nếu bị chặn quyền camera
         camera.start().catch(err => {
-            loadingText.innerText = "Lỗi: Vui lòng cấp quyền Camera cho trình duyệt!";
+            loadingText.innerText = "Vui lòng cấp quyền Camera cho trình duyệt!";
             loadingText.style.color = "red";
         });
 
