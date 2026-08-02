@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>AI Face Tracking (Sửa Lỗi Icon)</title>
+    <title>AI Face Tracking Cải Thiện</title>
     <!-- Import các thư viện MediaPipe từ CDN -->
     <script src="https://cdn.jsdelivr.net/npm/@mediapipe/camera_utils/camera_utils.js" crossorigin="anonymous"></script>
     <script src="https://cdn.jsdelivr.net/npm/@mediapipe/drawing_utils/drawing_utils.js" crossorigin="anonymous"></script>
@@ -14,13 +14,12 @@
             margin: 0;
             background-color: #121212;
             color: #ffffff;
-            /* Đặt font cơ bản để đảm bảo hiển thị tốt trên mọi thiết bị */
-            font-family: Arial, Helvetica, sans-serif;
+            font-family: Arial, sans-serif;
             display: flex;
             flex-direction: column;
             align-items: center;
         }
-        h2 { margin-top: 20px; text-align: center; font-weight: normal;}
+        h2 { margin-top: 20px; }
         .container {
             position: relative;
             margin-top: 10px;
@@ -31,13 +30,13 @@
             border-radius: 10px;
             background-color: #000;
             max-width: 100%;
-            /* Lật gương canvas để cử động tự nhiên như soi gương */
+            /* Lật gương canvas để cử động tự nhiên hơn như soi gương */
             transform: scaleX(-1); 
         }
         .dashboard {
             position: absolute;
             top: 15px;
-            right: 15px; /* Giữ bên phải màn hình hiển thị */
+            right: 15px; /* Chuyển bảng sang phải vì canvas lật gương */
             background: rgba(0, 0, 0, 0.7);
             padding: 10px 15px;
             border-radius: 8px;
@@ -51,7 +50,7 @@
 </head>
 <body>
 
-    <h2>AI Khuôn Mặt Cơ Bản - GithubPages</h2>
+    <h2>AI Nhận Diện Khuôn Mặt (Bản Cải Thiện)</h2>
     <div class="container">
         <video id="video" autoplay playsinline></video>
         <canvas id="output_canvas" width="640" height="480"></canvas>
@@ -61,7 +60,7 @@
             <p>⚡ FPS: <span id="fps" class="val">0</span></p>
             <p>👀 Chớp mắt: <span id="blinks" class="val">0</span></p>
             <p>👄 Miệng: <span id="mouth" class="val">Đóng</span></p>
-            <p>👤 Hướng: <span id="head" class="val">Chính diện</span></p>
+            <p>👤 Hướng đầu: <span id="head" class="val">Chính diện</span></p>
         </div>
     </div>
 
@@ -80,15 +79,15 @@
         let blinkCount = 0;
         let isBlinking = false;
         let lastTime = 0;
-        let lastBlinkTime = 0; // Cooldown chớp mắt
+        let lastBlinkTime = 0; // Thời điểm chớp mắt cuối cùng để tính Cooldown
 
-        // Hàm tính khoảng cách giữa 2 điểm (Normalized Coordinates)
+        // Hàm tính khoảng cách giữa 2 điểm
         function getDistance(p1, p2) {
             return Math.sqrt(Math.pow(p1.x - p2.x, 2) + Math.pow(p1.y - p2.y, 2));
         }
 
         function onResults(results) {
-            // 1. FPS
+            // 1. Tính toán FPS
             const now = performance.now();
             const fps = Math.round(1000 / (now - lastTime));
             lastTime = now;
@@ -101,16 +100,15 @@
             if (results.multiFaceLandmarks && results.multiFaceLandmarks.length > 0) {
                 const landmarks = results.multiFaceLandmarks[0];
 
-                // 2. Vẽ tessellation điểm mờ
-                drawConnectors(canvasCtx, landmarks, FACEMESH_TESSELATION, {color: '#ffffff15', lineWidth: 1});
+                // 2. Vẽ điểm (Mờ)
+                drawConnectors(canvasCtx, landmarks, FACEMESH_TESSELATION, {color: '#ffffff30', lineWidth: 1});
 
                 // 3. Tô màu các bộ phận
                 drawConnectors(canvasCtx, landmarks, FACEMESH_LEFT_EYE, {color: '#FF0000', lineWidth: 2});
                 drawConnectors(canvasCtx, landmarks, FACEMESH_RIGHT_EYE, {color: '#FF0000', lineWidth: 2});
                 drawConnectors(canvasCtx, landmarks, FACEMESH_LIPS, {color: '#00FF00', lineWidth: 2});
                 
-                // Mũi
-                const nosePoints = [1, 4];
+                const nosePoints = [1, 2, 4, 195, 197];
                 canvasCtx.fillStyle = '#0088FF';
                 nosePoints.forEach(idx => {
                     const p = landmarks[idx];
@@ -119,7 +117,7 @@
                     canvasCtx.fill();
                 });
 
-                // 4. Đếm số lần chớp mắt (Sửa lại một chút hệ số nhạy)
+                // 4. Đếm số lần chớp mắt (Đã cải thiện)
                 const leftEyeH = getDistance(landmarks[159], landmarks[145]);
                 const leftEyeW = getDistance(landmarks[33], landmarks[133]);
                 const rightEyeH = getDistance(landmarks[386], landmarks[374]);
@@ -128,16 +126,17 @@
                 const avgEAR = ((leftEyeH / leftEyeW) + (rightEyeH / rightEyeW)) / 2;
                 const currentTime = new Date().getTime();
 
-                // Ngưỡng EAR nhắm mắt nên rất thấp, EAR mở mắt cao hơn.
-                if (avgEAR < 0.19) { // Ngưỡng nhắm chặt hơn (0.19)
-                    // Cách lần chớp trước ít nhất 300ms
-                    if (!isBlinking && (currentTime - lastBlinkTime > 300)) {
+                // CẢI THIỆN: Dùng 2 ngưỡng khác nhau và thời gian chờ
+                if (avgEAR < 0.20) { // Ngưỡng nhắm (khắt khe hơn)
+                    // Cách lần chớp trước ít nhất 250ms mới đếm tiếp
+                    if (!isBlinking && (currentTime - lastBlinkTime > 250)) {
                         blinkCount++;
                         blinksEl.innerText = blinkCount;
                         isBlinking = true;
                         lastBlinkTime = currentTime;
                     }
-                } else if (avgEAR > 0.25) { // Ngưỡng mở hẳn (0.25)
+                } else if (avgEAR > 0.24) { 
+                    // Ngưỡng mở: Mắt phải mở đủ rộng mới cho phép đếm lần tiếp theo
                     isBlinking = false;
                 }
 
@@ -146,41 +145,40 @@
                 const mouthW = getDistance(landmarks[78], landmarks[308]); 
                 const mar = mouthH / mouthW;
 
-                if (mar > 0.16) { // Ngưỡng mở miệng (0.16)
-                    mouthEl.innerText = "Mở";
+                if (mar > 0.15) { 
+                    mouthEl.innerText = "Đang mở";
                     mouthEl.style.color = "red";
                 } else {
                     mouthEl.innerText = "Đóng";
                     mouthEl.style.color = "#00ff00";
                 }
 
-                // 6. Theo dõi đầu (Đã sửa lại ký tự mũi tên để không bị lỗi font)
+                // 6. Theo dõi đầu (Đã sửa lại hướng)
                 const nose = landmarks[1];
-                const physicalLeftCheek = landmarks[234];
-                const physicalRightCheek = landmarks[454];
+                const leftCheek = landmarks[234];
+                const rightCheek = landmarks[454];
 
-                const distToPhysicalLeft = getDistance(nose, physicalLeftCheek);
-                const distToPhysicalRight = getDistance(nose, physicalRightCheek);
-                const headRatio = distToPhysicalLeft / distToPhysicalRight;
+                const distLeft = getDistance(nose, leftCheek);
+                const distRight = getDistance(nose, rightCheek);
+                const headRatio = distLeft / distRight;
 
-                // THAY ĐỔI TẠI ĐÂY: Dùng ký tự mũi tên Unicode cơ bản nhất (←, →)
-                if (headRatio < 0.60) {
-                    headEl.innerText = "Quay trái ←"; // <- Left arrow
-                } 
-                else if (headRatio > 1.65) {
-                    headEl.innerText = "Quay phải →"; // -> Right arrow
+                // CHỈ SỬA LỖI ICON Ở ĐÂY: Thay mũi tên phức tạp thành mũi tên cơ bản
+                if (headRatio > 1.5) {
+                    headEl.innerText = "Quay trái ←";
+                } else if (headRatio < 0.65) {
+                    headEl.innerText = "Quay phải →";
                 } else {
-                    headEl.innerText = "Chính diện 👤"; // Biểu tượng này thường an toàn
+                    headEl.innerText = "Chính diện 👤";
                 }
 
-                // 7. Vẽ Text bộ phận lên Canvas (để sau lật gương để không bị ngược chữ)
+                // Vẽ Text bộ phận (để sau lật gương để không bị ngược chữ)
                 canvasCtx.save();
                 canvasCtx.translate(canvasElement.width, 0); // Đảo ngược x
                 canvasCtx.scale(-1, 1);
                 canvasCtx.fillStyle = "yellow";
-                canvasCtx.font = "bold 16px Arial";
+                canvasCtx.font = "16px Arial";
                 
-                // Hiển thị text tại vị trí thực (đã mirrored)
+                // Do canvas bị lật nên tọa độ text cũng phải tính lật lại (1 - x)
                 canvasCtx.fillText("Mắt", (1 - landmarks[159].x) * canvasElement.width - 15, landmarks[159].y * canvasElement.height - 15);
                 canvasCtx.fillText("Mắt", (1 - landmarks[386].x) * canvasElement.width - 15, landmarks[386].y * canvasElement.height - 15);
                 canvasCtx.fillText("Mũi", (1 - landmarks[1].x) * canvasElement.width - 10, landmarks[1].y * canvasElement.height - 15);
