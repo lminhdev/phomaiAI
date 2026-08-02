@@ -113,7 +113,7 @@
         }
     </style>
 </head>
-<body> <!-- Đã bỏ onclick="enableAudio()" -->
+<body> 
     
     <!-- HTML MỚI THÊM: Màn hình đỏ cảnh báo -->
     <div id="warning-screen">
@@ -169,7 +169,6 @@
         const audioCtx = new (window.AudioContext || window.webkitAudioContext)();
 
         function playBeep() {
-            // Tự động đánh thức AudioContext nếu trình duyệt đang khóa
             if (audioCtx.state === 'suspended') {
                 audioCtx.resume();
             }
@@ -261,7 +260,6 @@
                         isBlinking = true;
                         lastBlinkTime = currentTime;
                     }
-                    // Kiểm tra nhắm mắt quá lâu
                     if (eyeClosedStartTime === 0) {
                         eyeClosedStartTime = currentTime;
                     } else if (currentTime - eyeClosedStartTime > 1500) {
@@ -269,29 +267,36 @@
                     }
                 } else if (avgEAR > 0.24) { 
                     isBlinking = false;
-                    eyeClosedStartTime = 0; // Đặt lại đồng hồ nhắm mắt
+                    eyeClosedStartTime = 0; 
                 }
 
                 const mouthH = getDistance(landmarks[13], landmarks[14]); 
                 const mouthW = getDistance(landmarks[78], landmarks[308]); 
                 const mar = mouthH / mouthW;
 
-                // --- LOGIC MIỆNG (NÓI CHUYỆN & NGÁP) ---
+                // --- ĐÃ ĐIỀU CHỈNH LOGIC MIỆNG (NÓI CHUYỆN & NGÁP) ---
                 if (mar > 0.15) { 
                     mouthEl.innerText = "Đang mở";
                     mouthEl.style.color = "#ff4444";
                     
-                    // Phát hiện Ngáp (Há miệng rất to và lâu)
-                    if (mar > 0.25) {
-                        yawnEl.innerText = "Có";
-                        yawnEl.style.color = "#ff4444";
-                        
+                    // Phát hiện Ngáp (Yêu cầu há miệng to hơn - mar > 0.35)
+                    if (mar > 0.35) {
                         if (mouthOpenStartTime === 0) {
                             mouthOpenStartTime = currentTime;
-                        } else if (currentTime - mouthOpenStartTime > 1500) {
+                        } 
+                        
+                        // Yêu cầu há to liên tục 800ms (0.8s) mới hiện chữ "Có"
+                        if (currentTime - mouthOpenStartTime > 800) {
+                            yawnEl.innerText = "Có";
+                            yawnEl.style.color = "#ff4444";
+                        }
+                        
+                        // Yêu cầu há to liên tục 2500ms (2.5s) mới cảnh báo
+                        if (currentTime - mouthOpenStartTime > 2500) {
                             triggerWarning("⚠️ BẠN ĐANG NGÁP LIÊN TỤC ⚠️");
                         }
                     } else {
+                        // Nếu đang ngáp mà khép miệng lại bớt (dưới 0.35) thì hủy ngáp
                         yawnEl.innerText = "Không";
                         yawnEl.style.color = "#ccc";
                         mouthOpenStartTime = 0;
