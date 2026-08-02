@@ -95,13 +95,15 @@
             .val { display: inline-block; margin-left: 5px; font-size: 16px; }
         }
 
-        /* --- CSS MỚI THÊM CHO CẢNH BÁO --- */
+        /* --- CSS TỐI ƯU CHO CẢNH BÁO TRÊN ĐIỆN THOẠI --- */
         #warning-screen {
             position: fixed; top: 0; left: 0; width: 100vw; height: 100vh;
             background: rgba(255, 0, 0, 0.4);
             display: none; justify-content: center; align-items: center;
             z-index: 1000; pointer-events: none;
             animation: flash 0.5s infinite;
+            box-sizing: border-box;
+            padding: 20px;
         }
         @keyframes flash {
             0% { background: rgba(255, 0, 0, 0.2); }
@@ -109,13 +111,24 @@
             100% { background: rgba(255, 0, 0, 0.2); }
         }
         .warning-text {
-            color: white; font-size: 32px; font-weight: bold; text-shadow: 0px 0px 20px #000;
+            color: white; 
+            font-size: 24px; 
+            font-weight: bold; 
+            text-shadow: 0px 0px 20px #000;
+            text-align: center;
+            word-break: break-word;
+            padding: 0 10px;
+        }
+        @media (min-width: 768px) {
+            .warning-text {
+                font-size: 32px;
+            }
         }
     </style>
 </head>
 <body> 
     
-    <!-- HTML MỚI THÊM: Màn hình đỏ cảnh báo -->
+    <!-- Màn hình đỏ cảnh báo -->
     <div id="warning-screen">
         <div id="warning-message" class="warning-text">⚠️ PHÁT HIỆN BUỒN NGỦ ⚠️</div>
     </div>
@@ -132,7 +145,7 @@
             <div><p>👀 Chớp mắt:</p> <span id="blinks" class="val">0</span></div>
             <div><p>👄 Miệng:</p> <span id="mouth" class="val">Đóng</span></div>
             <div><p>👤 Hướng:</p> <span id="head" class="val">Chính diện</span></div>
-            <!-- MỚI THÊM: Hiển thị trạng thái ngáp và tổng quan -->
+            <!-- Hiển thị trạng thái ngáp và tổng quan -->
             <div><p>🥱 Ngáp:</p> <span id="yawn" class="val" style="color: #ccc;">Không</span></div>
             <div><p>🚨 Trạng thái:</p> <span id="status" class="val">Tỉnh táo</span></div>
         </div>
@@ -149,7 +162,6 @@
         const mouthEl = document.getElementById('mouth');
         const headEl = document.getElementById('head');
         
-        // --- JS MỚI THÊM CHO PHẦN TÌM KẾT QUẢ ---
         const yawnEl = document.getElementById('yawn');
         const statusEl = document.getElementById('status');
         const warningScreen = document.getElementById('warning-screen');
@@ -167,6 +179,13 @@
 
         // Cài đặt âm thanh (AudioContext)
         const audioCtx = new (window.AudioContext || window.webkitAudioContext)();
+
+        // Tự động kích hoạt AudioContext khi video bắt đầu chạy mà không cần chạm thủ công
+        videoElement.addEventListener('playing', () => {
+            if (audioCtx.state === 'suspended') {
+                audioCtx.resume();
+            }
+        });
 
         function playBeep() {
             if (audioCtx.state === 'suspended') {
@@ -263,7 +282,7 @@
                     if (eyeClosedStartTime === 0) {
                         eyeClosedStartTime = currentTime;
                     } else if (currentTime - eyeClosedStartTime > 1500) {
-                        triggerWarning("⚠️ MẮT ĐANG NHẮM QUÁ LÂU ⚠️");
+                        triggerWarning("⚠️ MẮT Đang NHẮM QUÁ LÂU ⚠️");
                     }
                 } else if (avgEAR > 0.24) { 
                     isBlinking = false;
